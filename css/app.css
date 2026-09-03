@@ -463,14 +463,106 @@ a {
   color: var(--info);
 }
 
-.discipline-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.6rem;
+/* Discipline overview table - tap a cell to enter/edit its value */
+.discipline-table-wrap {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+  margin-bottom: 1rem;
 }
 
-.discipline-grid .field {
-  margin-bottom: 0;
+.discipline-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.discipline-table th,
+.discipline-table td {
+  padding: 0.4rem;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.discipline-table th {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-top: 0.7rem;
+}
+
+.discipline-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.discipline-table .sticky-col {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  text-align: left;
+  font-weight: 600;
+  padding-left: 0.75rem;
+  box-shadow: 1px 0 0 var(--border);
+}
+
+.cell-btn {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0.3rem 0.4rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid transparent;
+  background: transparent;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cell-btn.empty {
+  color: var(--text-muted);
+  border-color: var(--border);
+  border-style: dashed;
+}
+
+.cell-btn.filled {
+  background: var(--ok-bg);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+/* Tap-to-edit modal */
+.modal-overlay:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 480px) {
+  .modal-overlay:not([hidden]) {
+    align-items: center;
+  }
+}
+
+.modal-card {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (min-width: 480px) {
+  .modal-card {
+    border-radius: var(--radius);
+  }
 }
 
 .section-title {
