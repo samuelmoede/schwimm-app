@@ -1,5 +1,6 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, formatDate, STATUS_META, GENDER_SYMBOL } from "../ui.js";
+import { icon } from "../icons.js";
 
 const DISCIPLINES = [
   { key: "wagnissprung", label: "Wagnissprung", placeholder: "z. B. bestanden" },
@@ -21,13 +22,13 @@ export async function renderPool(app, sessionId) {
   const records = await db.getRecordsBySession(sessionId);
   const recordByStudent = new Map(records.map((r) => [r.studentId, r]));
 
-  const groups = { anwesend: [], comment: [], abwesend: [], offen: [] };
+  // Students default to "anwesend" (present) unless marked otherwise in attendance.
+  const groups = { anwesend: [], comment: [], abwesend: [] };
   for (const s of students) {
     const status = recordByStudent.get(s.id)?.status;
-    if (status === "anwesend") groups.anwesend.push(s);
+    if (status === "abwesend") groups.abwesend.push(s);
     else if (status === "vergessen" || status === "unfaehig") groups.comment.push(s);
-    else if (status === "abwesend") groups.abwesend.push(s);
-    else groups.offen.push(s);
+    else groups.anwesend.push(s);
   }
 
   app.innerHTML = `
@@ -44,18 +45,6 @@ export async function renderPool(app, sessionId) {
           )}</textarea>
         </div>
       </div>
-
-      ${
-        groups.offen.length
-          ? `<div class="card" style="border:2px solid var(--warn);">
-              <strong>⚠️ Anwesenheit fehlt für ${groups.offen.length} Schüler:in${
-              groups.offen.length === 1 ? "" : "nen"
-            }:</strong>
-              <div class="muted" style="margin-top:0.3rem;">${groups.offen.map((s) => escapeHtml(s.name)).join(", ")}</div>
-              <a class="btn" href="#/session/${sessionId}/attendance" style="margin-top:0.6rem;">Zur Anwesenheit</a>
-            </div>`
-          : ""
-      }
 
       <div class="section-title">Aktiv – Disziplinen (${groups.anwesend.length})</div>
       ${
@@ -115,7 +104,7 @@ export async function renderPool(app, sessionId) {
       <div class="student-card">
         <div class="name-row">
           ${GENDER_SYMBOL[s.gender]} ${escapeHtml(s.name)}
-          <span class="tag ${STATUS_META[status].tag}">${STATUS_META[status].emoji} ${STATUS_META[status].label}</span>
+          <span class="tag ${STATUS_META[status].tag}">${icon(STATUS_META[status].icon, { size: 14 })} ${STATUS_META[status].label}</span>
         </div>
         <div class="field" style="margin-bottom:0;">
           <label for="c-${s.id}">Kommentar</label>

@@ -1,5 +1,6 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, toast } from "../ui.js";
+import { icon } from "../icons.js";
 
 export async function renderCourses(app) {
   const courses = await db.getCourses();
@@ -7,11 +8,12 @@ export async function renderCourses(app) {
   app.innerHTML = `
     ${topbar({
       title: "Schwimmunterricht",
-      actionsHtml: `<a class="icon-btn" href="#/backup" aria-label="Sicherung">💾</a>`,
+      actionsHtml: `<a class="icon-btn" href="#/backup" aria-label="Sicherung">${icon("save", { size: 22 })}</a>`,
     })}
     <div class="container">
       <div class="privacy-note">
-        🔒 Alle Daten bleiben nur auf diesem Gerät – es gibt keine Cloud, keinen Server, keine Übertragung.
+        ${icon("lock", { size: 18 })}
+        <span>Alle Daten bleiben nur auf diesem Gerät – es gibt keine Cloud, keinen Server, keine Übertragung.</span>
       </div>
 
       <div class="card" id="new-course-card" style="display:none; margin-top:1rem;">
@@ -30,19 +32,19 @@ export async function renderCourses(app) {
       <div class="list" id="course-list">
         ${
           courses.length === 0
-            ? `<div class="empty-state"><span class="big-emoji">🏊</span>Noch kein Kurs angelegt.<br />Tippe unten auf „+“, um zu starten.</div>`
+            ? `<div class="empty-state"><img class="big-emoji" src="./icons/icon-192.png" alt="" />Noch kein Kurs angelegt.<br />Tippe unten auf „+“, um zu starten.</div>`
             : courses.map((c) => courseRow(c)).join("")
         }
       </div>
     </div>
-    <button class="fab" id="fab-new-course" aria-label="Neuer Kurs">+</button>
+    <button class="fab" id="fab-new-course" aria-label="Neuer Kurs">${icon("plus", { size: 28 })}</button>
   `;
 
   function courseRow(c) {
     return `
       <a class="list-item" href="#/course/${c.id}">
         <span class="title">${escapeHtml(c.name)}</span>
-        <span class="chevron">›</span>
+        <span class="chevron">${icon("chevronRight", { size: 20 })}</span>
       </a>
     `;
   }

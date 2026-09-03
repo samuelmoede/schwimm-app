@@ -1,6 +1,7 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, formatDate, toast, STATUS_META, GENDER_LABEL } from "../ui.js";
 import { toCSV, downloadTextFile } from "../csv.js";
+import { icon } from "../icons.js";
 
 const DISCIPLINE_KEYS = ["wagnissprung", "tauchen", "ausdauer", "brust", "kraul", "ruecken"];
 const DISCIPLINE_LABELS = {
@@ -27,7 +28,7 @@ export async function renderHistory(app, courseId) {
       <div class="card">
         <h2>Notenübersicht exportieren</h2>
         <p class="muted">Eine Zeile pro Schüler:in und Termin, als CSV zum Öffnen in Excel/LibreOffice.</p>
-        <button class="btn btn-primary btn-block" id="export-course-csv">📊 CSV exportieren</button>
+        <button class="btn btn-primary btn-block" id="export-course-csv">${icon("chart", { size: 18 })} CSV exportieren</button>
       </div>
 
       <div class="section-title">Termine (${sessions.length})</div>
@@ -46,7 +47,7 @@ export async function renderHistory(app, courseId) {
           ${formatDate(s.date)}
           ${s.note ? `<div class="muted" style="font-weight:400; font-size:0.85rem; margin-top:0.2rem;">${escapeHtml(s.note)}</div>` : ""}
         </span>
-        <span class="chevron">›</span>
+        <span class="chevron">${icon("chevronRight", { size: 20 })}</span>
       </a>
     `;
   }

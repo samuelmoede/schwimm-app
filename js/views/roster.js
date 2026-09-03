@@ -1,6 +1,7 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, toast, GENDER_LABEL, GENDER_SYMBOL } from "../ui.js";
 import { parseCSV, toCSV, downloadTextFile } from "../csv.js";
+import { icon } from "../icons.js";
 
 function normalizeGender(raw) {
   const v = (raw || "").trim().toLowerCase();
@@ -33,7 +34,7 @@ export async function renderRoster(app, courseId) {
     const listEl = document.getElementById("student-list");
     listEl.innerHTML =
       students.length === 0
-        ? `<div class="empty-state"><span class="big-emoji">👥</span>Noch keine Schüler:innen. Importiere eine Datei oder füge einzeln hinzu.</div>`
+        ? `<div class="empty-state">${icon("users", { size: 40, className: "big-emoji-icon" })}Noch keine Schüler:innen. Importiere eine Datei oder füge einzeln hinzu.</div>`
         : students.map(studentRow).join("");
     listEl.querySelectorAll("[data-toggle-gender]").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -64,7 +65,7 @@ export async function renderRoster(app, courseId) {
         </button>
         <span class="title">${escapeHtml(s.name)}</span>
         <span class="muted" style="font-size:0.85rem;">${GENDER_LABEL[s.gender]}</span>
-        <button class="icon-btn" data-delete-student="${s.id}" data-name="${escapeHtml(s.name)}" aria-label="Entfernen">✕</button>
+        <button class="icon-btn" data-delete-student="${s.id}" data-name="${escapeHtml(s.name)}" aria-label="Entfernen">${icon("trash", { size: 18 })}</button>
       </div>
     `;
   }
@@ -76,8 +77,8 @@ export async function renderRoster(app, courseId) {
         <h2>Aus Datei importieren</h2>
         <p class="muted">CSV-Datei mit Spalten <code>name</code> und optional <code>geschlecht</code> (m/w). Fehlt die Spalte, wird die erste Spalte als Name verwendet.</p>
         <div class="row">
-          <label class="btn btn-primary btn-block" for="csv-file" style="cursor:pointer;">📄 Datei wählen</label>
-          <button class="btn" id="download-template">Vorlage</button>
+          <label class="btn btn-primary btn-block" for="csv-file" style="cursor:pointer;">${icon("fileUp", { size: 18 })} Datei wählen</label>
+          <button class="btn" id="download-template">${icon("download", { size: 18 })} Vorlage</button>
         </div>
         <input type="file" id="csv-file" accept=".csv,text/csv" style="display:none;" />
       </div>

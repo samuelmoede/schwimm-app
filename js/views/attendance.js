@@ -1,7 +1,13 @@
 import * as db from "../db.js";
-import { topbar, escapeHtml, formatDate, STATUS_META, GENDER_SYMBOL, GENDER_LABEL } from "../ui.js";
+import { topbar, escapeHtml, formatDate } from "../ui.js";
+import { icon } from "../icons.js";
 
-const STATUS_ORDER = ["anwesend", "abwesend", "vergessen", "unfaehig"];
+// Everyone is assumed present by default - only exceptions need a tap.
+const EXCEPTIONS = [
+  { status: "abwesend", label: "Abwesend", short: "Abw.", iconName: "close" },
+  { status: "vergessen", label: "Sachen vergessen", short: "Verg.", iconName: "backpack" },
+  { status: "unfaehig", label: "Nicht schwimmfähig", short: "Unf.", iconName: "thermometer" },
+];
 
 export async function renderAttendance(app, sessionId) {
   const session = await db.getSession(sessionId);
@@ -18,34 +24,34 @@ export async function renderAttendance(app, sessionId) {
     ${topbar({ title: `${escapeHtml(course.name)} · ${formatDate(session.date)}`, back: `#/course/${session.courseId}` })}
     <div class="counter-bar" id="counter-bar"></div>
     <div class="container">
-      <div class="section-title">Abfahrt in der Schule – Anwesenheit</div>
-      <div id="student-cards">
-        ${students.map((s) => studentCard(s, recordByStudent.get(s.id))).join("")}
+      <div class="section-title">Abfahrt in der Schule</div>
+      <p class="muted" style="margin-top:-0.4rem;">Alle gelten als anwesend. Nur Ausnahmen antippen.</p>
+      <div class="list" id="roll-list">
+        ${students.map((s) => rollRow(s, recordByStudent.get(s.id)?.status)).join("")}
       </div>
     </div>
     <div class="bottombar">
-      <a class="btn btn-primary btn-block btn-lg" href="#/session/${sessionId}/pool">Weiter zur Schwimmhalle →</a>
+      <a class="btn btn-primary btn-block btn-lg" href="#/session/${sessionId}/pool">Weiter zur Schwimmhalle</a>
     </div>
   `;
 
-  function studentCard(s, record) {
-    const status = record?.status;
+  function rollRow(s, status) {
+    const isDefault = !status || status === "anwesend";
     return `
-      <div class="student-card" data-student="${s.id}">
-        <div class="name-row">
-          ${escapeHtml(s.name)}
-          <span class="gender-badge">${GENDER_SYMBOL[s.gender]} ${GENDER_LABEL[s.gender]}</span>
-        </div>
-        <div class="status-grid">
-          ${STATUS_ORDER.map(
-            (st) => `
+      <div class="roll-row ${isDefault ? "is-present-default" : ""}" data-student="${s.id}">
+        <div class="roll-name">${escapeHtml(s.name)}</div>
+        <div class="roll-actions">
+          ${EXCEPTIONS.map(
+            (e) => `
             <button
-              class="status-btn ${status === st ? "active" : ""}"
-              data-status="${st}"
+              class="exc-btn ${status === e.status ? "active" : ""}"
+              data-exc="${e.status}"
               data-student="${s.id}"
+              title="${e.label}"
+              aria-label="${e.label}"
             >
-              <span class="emoji">${STATUS_META[st].emoji}</span>
-              <span>${STATUS_META[st].label}</span>
+              ${icon(e.iconName, { size: 18 })}
+              <span>${e.short}</span>
             </button>
           `
           ).join("")}
@@ -57,8 +63,8 @@ export async function renderAttendance(app, sessionId) {
   function updateCounterBar() {
     const counts = { m: 0, w: 0, d: 0 };
     for (const s of students) {
-      const r = recordByStudent.get(s.id);
-      if (r?.status === "anwesend") counts[s.gender] = (counts[s.gender] || 0) + 1;
+      const status = recordByStudent.get(s.id)?.status;
+      if (status !== "abwesend") counts[s.gender] = (counts[s.gender] || 0) + 1;
     }
     const bar = document.getElementById("counter-bar");
     bar.innerHTML = `
@@ -68,20 +74,27 @@ export async function renderAttendance(app, sessionId) {
     `;
   }
 
-  document.getElementById("student-cards").addEventListener("click", async (e) => {
-    const btn = e.target.closest(".status-btn");
+  document.getElementById("roll-list").addEventListener("click", (e) => {
+    const btn = e.target.closest(".exc-btn");
     if (!btn) return;
     const studentId = btn.getAttribute("data-student");
-    const status = btn.getAttribute("data-status");
-    const card = btn.closest(".student-card");
+    const exc = btn.getAttribute("data-exc");
+    const row = btn.closest(".roll-row");
+    const wasActive = btn.classList.contains("active");
+    const newStatus = wasActive ? "anwesend" : exc;
 
-    const record = await db.upsertRecord(sessionId, studentId, { status });
-    recordByStudent.set(studentId, record);
-
-    card.querySelectorAll(".status-btn").forEach((b) => {
-      b.classList.toggle("active", b.getAttribute("data-status") === status);
+    // Update immediately so tapping through a long roster feels instant; the
+    // write to IndexedDB happens in the background (still ordered correctly).
+    row.querySelectorAll(".exc-btn").forEach((b) => {
+      b.classList.toggle("active", !wasActive && b.getAttribute("data-exc") === exc);
     });
+    row.classList.toggle("is-present-default", newStatus === "anwesend");
+    recordByStudent.set(studentId, { ...(recordByStudent.get(studentId) || {}), status: newStatus });
     updateCounterBar();
+
+    db.upsertRecord(sessionId, studentId, { status: newStatus }).then((record) => {
+      recordByStudent.set(studentId, record);
+    });
   });
 
   updateCounterBar();

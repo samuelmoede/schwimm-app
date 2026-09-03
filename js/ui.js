@@ -1,3 +1,5 @@
+import { icon } from "./icons.js";
+
 export function escapeHtml(s) {
   const div = document.createElement("div");
   div.textContent = s ?? "";
@@ -7,7 +9,7 @@ export function escapeHtml(s) {
 export function topbar({ title, back, actionsHtml = "" }) {
   return `
     <div class="topbar">
-      ${back ? `<a class="icon-btn" href="${back}" aria-label="Zurück">←</a>` : ""}
+      ${back ? `<a class="icon-btn" href="${back}" aria-label="Zurück">${icon("back", { size: 22 })}</a>` : ""}
       <h1>${escapeHtml(title)}</h1>
       ${actionsHtml}
     </div>
@@ -47,10 +49,10 @@ export const GENDER_LABEL = { m: "Junge", w: "Mädchen", d: "divers" };
 export const GENDER_SYMBOL = { m: "♂", w: "♀", d: "⚧" };
 
 export const STATUS_META = {
-  anwesend: { label: "Anwesend", emoji: "✅", tag: "ok" },
-  abwesend: { label: "Abwesend", emoji: "🚫", tag: "bad" },
-  vergessen: { label: "Sachen vergessen", emoji: "🎒", tag: "warn" },
-  unfaehig: { label: "Nicht schwimmfähig", emoji: "🤒", tag: "info" },
+  anwesend: { label: "Anwesend", icon: "check", tag: "ok" },
+  abwesend: { label: "Abwesend", icon: "close", tag: "bad" },
+  vergessen: { label: "Sachen vergessen", icon: "backpack", tag: "warn" },
+  unfaehig: { label: "Nicht schwimmfähig", icon: "thermometer", tag: "info" },
 };
 
 export const ACTIVE_STATUSES = ["anwesend"];

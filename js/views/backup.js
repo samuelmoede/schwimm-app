@@ -1,6 +1,7 @@
 import * as db from "../db.js";
 import { topbar, toast } from "../ui.js";
 import { downloadTextFile } from "../csv.js";
+import { icon } from "../icons.js";
 
 export async function renderBackup(app) {
   const courses = await db.getCourses();
@@ -9,20 +10,23 @@ export async function renderBackup(app) {
     ${topbar({ title: "Sicherung", back: "#/" })}
     <div class="container">
       <div class="privacy-note">
-        🔒 Die Sicherungsdatei enthält alle Kursdaten (inkl. Schülernamen und Werte) im Klartext. Bewahre sie an
-        einem sicheren Ort auf.
+        ${icon("lock", { size: 18 })}
+        <span>Die Sicherungsdatei enthält alle Kursdaten (inkl. Schülernamen und Werte) im Klartext. Bewahre sie an einem sicheren Ort auf.</span>
       </div>
 
       <div class="card">
         <h2>Sicherung erstellen</h2>
         <p class="muted">${courses.length} Kurs${courses.length === 1 ? "" : "e"} auf diesem Gerät. Lade regelmäßig eine Sicherung herunter, damit bei einem Gerätewechsel oder gelöschten Browserdaten nichts verloren geht.</p>
-        <button class="btn btn-primary btn-block" id="export-backup">⬇️ Sicherung herunterladen (JSON)</button>
+        <button class="btn btn-primary btn-block" id="export-backup">${icon("download", { size: 18 })} Sicherung herunterladen (JSON)</button>
       </div>
 
       <div class="card">
         <h2>Sicherung wiederherstellen</h2>
-        <p class="muted">⚠️ Dadurch werden <strong>alle</strong> aktuell auf diesem Gerät gespeicherten Kurse ersetzt.</p>
-        <label class="btn btn-block" for="import-file" style="cursor:pointer;">📂 Sicherungsdatei wählen</label>
+        <div class="privacy-note" style="margin-bottom:0.9rem;">
+          ${icon("alert", { size: 18 })}
+          <span>Dadurch werden <strong>alle</strong> aktuell auf diesem Gerät gespeicherten Kurse ersetzt.</span>
+        </div>
+        <label class="btn btn-block" for="import-file" style="cursor:pointer;">${icon("fileUp", { size: 18 })} Sicherungsdatei wählen</label>
         <input type="file" id="import-file" accept="application/json,.json" style="display:none;" />
       </div>
     </div>

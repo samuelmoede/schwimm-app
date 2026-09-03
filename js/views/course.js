@@ -1,5 +1,6 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, toast, formatDate, todayISO } from "../ui.js";
+import { icon } from "../icons.js";
 
 export async function renderCourse(app, courseId) {
   const course = await db.getCourse(courseId);
@@ -23,12 +24,12 @@ export async function renderCourse(app, courseId) {
     ${topbar({
       title: course.name,
       back: "#/",
-      actionsHtml: `<button class="icon-btn" id="delete-course" aria-label="Kurs löschen">🗑</button>`,
+      actionsHtml: `<button class="icon-btn" id="delete-course" aria-label="Kurs löschen">${icon("trash", { size: 20 })}</button>`,
     })}
     <div class="container">
       <div class="tabs">
-        <a class="tab" href="#/course/${courseId}/roster">👥 Schülerliste (${students.length})</a>
-        <a class="tab" href="#/course/${courseId}/history">📋 Verlauf &amp; Sicherung</a>
+        <a class="tab" href="#/course/${courseId}/roster">${icon("users", { size: 18 })} Schülerliste (${students.length})</a>
+        <a class="tab" href="#/course/${courseId}/history">${icon("calendar", { size: 18 })} Verlauf &amp; Sicherung</a>
       </div>
 
       <div class="card" id="new-session-card" style="display:none;">
@@ -46,13 +47,13 @@ export async function renderCourse(app, courseId) {
       <div class="section-title">Termine</div>
       ${
         students.length === 0
-          ? `<div class="empty-state"><span class="big-emoji">👥</span>Lege zuerst eine Schülerliste an.<br /><a class="btn btn-primary" href="#/course/${courseId}/roster" style="margin-top:0.75rem;">Schülerliste importieren</a></div>`
+          ? `<div class="empty-state"><img class="big-emoji" src="./icons/icon-192.png" alt="" />Lege zuerst eine Schülerliste an.<br /><a class="btn btn-primary" href="#/course/${courseId}/roster" style="margin-top:0.75rem;">Schülerliste importieren</a></div>`
           : sessionRows.length === 0
-          ? `<div class="empty-state"><span class="big-emoji">🗓️</span>Noch kein Termin angelegt.<br />Tippe unten auf „+“.</div>`
+          ? `<div class="empty-state"><img class="big-emoji" src="./icons/icon-192.png" alt="" />Noch kein Termin angelegt.<br />Tippe unten auf „+“.</div>`
           : `<div class="list">${sessionRows.map(sessionRow).join("")}</div>`
       }
     </div>
-    ${students.length > 0 ? `<button class="fab" id="fab-new-session" aria-label="Neuer Termin">+</button>` : ""}
+    ${students.length > 0 ? `<button class="fab" id="fab-new-session" aria-label="Neuer Termin">${icon("plus", { size: 28 })}</button>` : ""}
   `;
 
   function sessionRow({ session, stats }) {
@@ -64,7 +65,7 @@ export async function renderCourse(app, courseId) {
             ${stats.anwesend} anwesend (♂ ${stats.m} · ♀ ${stats.w}) · ${stats.abwesend} abwesend
           </div>
         </span>
-        <span class="chevron">›</span>
+        <span class="chevron">${icon("chevronRight", { size: 20 })}</span>
       </a>
     `;
   }
@@ -91,16 +92,21 @@ export async function renderCourse(app, courseId) {
   });
 }
 
+// Students default to "anwesend" until marked otherwise - a missing record is present too.
 function computeStats(students, records) {
-  const genderById = Object.fromEntries(students.map((s) => [s.id, s.gender]));
+  const statusById = new Map(records.map((r) => [r.studentId, r.status]));
   const stats = { anwesend: 0, abwesend: 0, vergessen: 0, unfaehig: 0, m: 0, w: 0 };
-  for (const r of records) {
-    if (r.status && stats[r.status] !== undefined) stats[r.status]++;
-    if (r.status === "anwesend") {
-      const g = genderById[r.studentId];
-      if (g === "m") stats.m++;
-      else if (g === "w") stats.w++;
+  for (const s of students) {
+    const status = statusById.get(s.id);
+    if (status === "abwesend") {
+      stats.abwesend++;
+      continue;
     }
+    stats.anwesend++;
+    if (s.gender === "m") stats.m++;
+    else if (s.gender === "w") stats.w++;
+    if (status === "vergessen") stats.vergessen++;
+    else if (status === "unfaehig") stats.unfaehig++;
   }
   return stats;
 }

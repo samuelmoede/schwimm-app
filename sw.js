@@ -1,7 +1,7 @@
 // Service worker for the offline-first swim tracker.
 // Everything here is same-origin static assets - no external network calls ever.
 
-const CACHE_NAME = "swimtracker-v1";
+const CACHE_NAME = "swimtracker-v2";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   "./js/db.js",
   "./js/csv.js",
   "./js/ui.js",
+  "./js/icons.js",
   "./js/views/courses.js",
   "./js/views/course.js",
   "./js/views/roster.js",
