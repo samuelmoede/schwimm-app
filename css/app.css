@@ -549,6 +549,26 @@ a {
   color: var(--ok);
 }
 
+.small {
+  font-size: 0.78em;
+}
+
+[data-name-cell] {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.discipline-table tr.row-absent td {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.discipline-table tr.row-absent .cell-btn {
+  pointer-events: none;
+}
+
 /* Tap-to-edit modal */
 .modal-overlay:not([hidden]) {
   position: fixed;
@@ -579,6 +599,48 @@ a {
   .modal-card {
     border-radius: var(--radius);
   }
+}
+
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.status-pick-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--tap);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.status-pick-btn[data-tag="ok"] {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.status-pick-btn[data-tag="bad"] {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.status-pick-btn[data-tag="warn"] {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.status-pick-btn[data-tag="info"] {
+  border-color: var(--info);
+  color: var(--info);
 }
 
 .section-title {
