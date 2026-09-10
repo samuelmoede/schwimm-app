@@ -1,5 +1,5 @@
 import * as db from "../db.js";
-import { topbar, escapeHtml, formatDate, STATUS_META, GENDER_SYMBOL } from "../ui.js";
+import { topbar, escapeHtml, formatDate, STATUS_META } from "../ui.js";
 import { icon } from "../icons.js";
 
 const DISCIPLINES = [
@@ -12,6 +12,37 @@ const DISCIPLINES = [
 ];
 const DISCIPLINE_BY_KEY = Object.fromEntries(DISCIPLINES.map((d) => [d.key, d]));
 
+const LONG_PRESS_MS = 500;
+
+// Surname-ish sort key: last "word" of the name, since students are stored
+// as one free-text name (usually "Vorname Nachname").
+function surnameKey(name) {
+  const parts = name.trim().split(/\s+/);
+  return (parts.length > 1 ? parts[parts.length - 1] : name).toLowerCase();
+}
+
+// Every boy across all courses - not just this session's course - since one
+// teacher can be responsible for all boys at the pool while other teachers
+// cover the rest of each class.
+async function loadBoysAcrossCourses() {
+  const courses = await db.getCourses();
+  const perCourse = await Promise.all(courses.map((c) => db.getStudentsByCourse(c.id)));
+  const boys = [];
+  courses.forEach((c, i) => {
+    for (const s of perCourse[i]) {
+      if (s.gender === "m") boys.push({ ...s, courseName: c.name });
+    }
+  });
+  boys.sort((a, b) => {
+    return (
+      a.courseName.localeCompare(b.courseName, "de") ||
+      surnameKey(a.name).localeCompare(surnameKey(b.name), "de") ||
+      a.name.localeCompare(b.name, "de")
+    );
+  });
+  return boys;
+}
+
 export async function renderPool(app, sessionId) {
   const session = await db.getSession(sessionId);
   if (!session) {
@@ -19,17 +50,18 @@ export async function renderPool(app, sessionId) {
     return;
   }
   const course = await db.getCourse(session.courseId);
-  const students = await db.getStudentsByCourse(session.courseId);
+  const students = await loadBoysAcrossCourses();
   const records = await db.getRecordsBySession(sessionId);
   const recordByStudent = new Map(records.map((r) => [r.studentId, r]));
 
-  // Students default to "anwesend" (present) unless marked otherwise in attendance.
-  const groups = { anwesend: [], comment: [], abwesend: [] };
+  // Boys default to "anwesend" (present) unless marked otherwise here or
+  // during the home class's own departure roll call.
+  const groups = { active: [], comment: [], absent: [] };
   for (const s of students) {
     const status = recordByStudent.get(s.id)?.status;
-    if (status === "abwesend") groups.abwesend.push(s);
+    if (status === "abwesend") groups.absent.push(s);
     else if (status === "vergessen" || status === "unfaehig") groups.comment.push(s);
-    else groups.anwesend.push(s);
+    else groups.active.push(s);
   }
 
   app.innerHTML = `
@@ -47,11 +79,13 @@ export async function renderPool(app, sessionId) {
         </div>
       </div>
 
-      <div class="section-title">Aktiv – Disziplinen (${groups.anwesend.length})</div>
+      <div class="section-title">Jungen – Disziplinen (${groups.active.length} anwesend${
+    groups.absent.length ? `, ${groups.absent.length} abwesend` : ""
+  })</div>
       ${
-        groups.anwesend.length === 0
-          ? `<div class="empty-state muted">Niemand als „anwesend“ markiert.</div>`
-          : `<p class="muted" style="margin-top:-0.4rem;">Zelle antippen zum Eintragen. „–“ = noch offen.</p>
+        groups.active.length === 0 && groups.absent.length === 0
+          ? `<div class="empty-state muted">Keine Jungen gefunden. Lege Klassen mit Schüler:innen an.</div>`
+          : `<p class="muted" style="margin-top:-0.4rem;">Zelle antippen zum Eintragen. Name gedrückt halten, um den Status zu ändern. „–“ = noch offen.</p>
              <div class="discipline-table-wrap">
                <table class="discipline-table">
                  <thead>
@@ -60,7 +94,10 @@ export async function renderPool(app, sessionId) {
                      ${DISCIPLINES.map((d) => `<th>${d.short}</th>`).join("")}
                    </tr>
                  </thead>
-                 <tbody>${groups.anwesend.map(studentRow).join("")}</tbody>
+                 <tbody>
+                   ${groups.active.map((s) => studentRow(s, false)).join("")}
+                   ${groups.absent.map((s) => studentRow(s, true)).join("")}
+                 </tbody>
                </table>
              </div>`
       }
@@ -70,13 +107,6 @@ export async function renderPool(app, sessionId) {
         groups.comment.length === 0
           ? `<div class="empty-state muted">Niemand in dieser Kategorie.</div>`
           : groups.comment.map(commentCard).join("")
-      }
-
-      ${
-        groups.abwesend.length
-          ? `<div class="section-title">Abwesend (${groups.abwesend.length})</div>
-             <div class="card muted">${groups.abwesend.map((s) => escapeHtml(s.name)).join(", ")}</div>`
-          : ""
       }
     </div>
 
@@ -94,14 +124,35 @@ export async function renderPool(app, sessionId) {
         <button class="btn btn-block" id="modal-cancel" style="margin-top:0.5rem;">Abbrechen</button>
       </div>
     </div>
+
+    <div class="modal-overlay" id="status-modal" hidden>
+      <div class="modal-card">
+        <h3 id="status-modal-title">Status ändern</h3>
+        <div class="status-options" id="status-options">
+          ${Object.entries(STATUS_META)
+            .map(
+              ([key, meta]) => `
+              <button class="status-pick-btn" data-status="${key}" data-tag="${meta.tag}">
+                ${icon(meta.icon, { size: 18 })} ${meta.label}
+              </button>
+            `
+            )
+            .join("")}
+        </div>
+        <button class="btn btn-block" id="status-modal-cancel">Abbrechen</button>
+      </div>
+    </div>
   `;
 
-  function studentRow(s) {
+  function studentRow(s, isAbsent) {
     const record = recordByStudent.get(s.id);
     const values = record?.disciplines || {};
     return `
-      <tr>
-        <td class="sticky-col">${GENDER_SYMBOL[s.gender]} ${escapeHtml(s.name)}</td>
+      <tr class="${isAbsent ? "row-absent" : ""}">
+        <td class="sticky-col name-cell" data-name-cell="${s.id}">
+          <div>${escapeHtml(s.name)} <span class="muted small">(${escapeHtml(s.courseName)})</span></div>
+          ${isAbsent ? `<div class="muted" style="font-size:0.68rem;">abwesend – antippen für „anwesend“</div>` : ""}
+        </td>
         ${DISCIPLINES.map((d) => {
           const val = values[d.key];
           return `<td><button class="cell-btn ${val ? "filled" : "empty"}" data-student="${s.id}" data-discipline="${d.key}">${
@@ -117,8 +168,8 @@ export async function renderPool(app, sessionId) {
     const status = record?.status;
     return `
       <div class="student-card">
-        <div class="name-row">
-          ${GENDER_SYMBOL[s.gender]} ${escapeHtml(s.name)}
+        <div class="name-row" data-name-cell="${s.id}">
+          ${escapeHtml(s.name)} <span class="muted small">(${escapeHtml(s.courseName)})</span>
           <span class="tag ${STATUS_META[status].tag}">${icon(STATUS_META[status].icon, { size: 14 })} ${STATUS_META[status].label}</span>
         </div>
         <div class="field" style="margin-bottom:0;">
@@ -148,7 +199,7 @@ export async function renderPool(app, sessionId) {
   const modalTitle = document.getElementById("modal-title");
   const modalHint = document.getElementById("modal-hint");
   const modalInput = document.getElementById("modal-input");
-  let editing = null; // { studentId, key, name, btn }
+  let editing = null; // { studentId, key, btn }
 
   function openModal(btn) {
     const studentId = btn.getAttribute("data-student");
@@ -183,7 +234,10 @@ export async function renderPool(app, sessionId) {
   }
 
   app.querySelectorAll(".cell-btn").forEach((btn) => {
-    btn.addEventListener("click", () => openModal(btn));
+    btn.addEventListener("click", () => {
+      if (btn.closest("tr").classList.contains("row-absent")) return;
+      openModal(btn);
+    });
   });
 
   document.getElementById("modal-save").addEventListener("click", () => applyValue(modalInput.value.trim()));
@@ -195,5 +249,72 @@ export async function renderPool(app, sessionId) {
   modalInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") applyValue(modalInput.value.trim());
     if (e.key === "Escape") closeModal();
+  });
+
+  // Status modal: opened by long-pressing a student's name (see below).
+  const statusModal = document.getElementById("status-modal");
+  const statusModalTitle = document.getElementById("status-modal-title");
+  let statusTarget = null;
+
+  async function setStatus(studentId, status) {
+    await db.upsertRecord(sessionId, studentId, { status });
+    await renderPool(app, sessionId);
+  }
+
+  function openStatusModal(studentId) {
+    statusTarget = studentId;
+    const s = students.find((st) => st.id === studentId);
+    statusModalTitle.textContent = `${s.name} (${s.courseName})`;
+    statusModal.hidden = false;
+  }
+
+  function closeStatusModal() {
+    statusModal.hidden = true;
+    statusTarget = null;
+  }
+
+  document.getElementById("status-options").querySelectorAll("[data-status]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const status = btn.getAttribute("data-status");
+      const studentId = statusTarget;
+      closeStatusModal();
+      setStatus(studentId, status);
+    });
+  });
+  document.getElementById("status-modal-cancel").addEventListener("click", closeStatusModal);
+  statusModal.addEventListener("click", (e) => {
+    if (e.target === statusModal) closeStatusModal();
+  });
+
+  // Long-press a name to change status; a quick tap on an already-absent
+  // row instantly restores "anwesend" instead of opening the full menu.
+  app.querySelectorAll("[data-name-cell]").forEach((el) => {
+    const studentId = el.getAttribute("data-name-cell");
+    let timer = null;
+    let firedLongPress = false;
+
+    function start(e) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      firedLongPress = false;
+      timer = setTimeout(() => {
+        firedLongPress = true;
+        openStatusModal(studentId);
+      }, LONG_PRESS_MS);
+    }
+    function cancelTimer() {
+      clearTimeout(timer);
+    }
+    function end() {
+      clearTimeout(timer);
+      if (firedLongPress) return;
+      const status = recordByStudent.get(studentId)?.status;
+      if (status === "abwesend") setStatus(studentId, "anwesend");
+    }
+
+    el.addEventListener("pointerdown", start);
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointerleave", cancelTimer);
+    el.addEventListener("pointercancel", cancelTimer);
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
   });
 }
