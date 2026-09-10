@@ -1,6 +1,6 @@
 import * as db from "../db.js";
 import { topbar, escapeHtml, toast, GENDER_LABEL, GENDER_SYMBOL } from "../ui.js";
-import { parseCSV, toCSV, downloadTextFile } from "../csv.js";
+import { parseCSV, toCSV, downloadTextFile, readTextSmart } from "../csv.js";
 import { icon } from "../icons.js";
 
 function normalizeGender(raw) {
@@ -14,8 +14,12 @@ function normalizeGender(raw) {
 function rowsToStudents(rows) {
   return rows
     .map((row) => {
+      const vorname = (row.vorname || "").trim();
+      const nachname = (row.nachname || "").trim();
       const name =
-        row.name || row.schüler || row.schueler || row.schülerin || row.vorname || Object.values(row)[0] || "";
+        vorname || nachname
+          ? [vorname, nachname].filter(Boolean).join(" ")
+          : row.name || row.schüler || row.schueler || row.schülerin || Object.values(row)[0] || "";
       const genderRaw = row.geschlecht || row.gender || row["m/w"] || "";
       return { name: name.trim(), gender: normalizeGender(genderRaw) };
     })
@@ -75,7 +79,7 @@ export async function renderRoster(app, courseId) {
     <div class="container">
       <div class="card">
         <h2>Aus Datei importieren</h2>
-        <p class="muted">CSV-Datei mit Spalten <code>name</code> und optional <code>geschlecht</code> (m/w). Fehlt die Spalte, wird die erste Spalte als Name verwendet.</p>
+        <p class="muted">CSV-Datei mit Spalten <code>name</code> (oder <code>vorname</code> + <code>nachname</code>) und optional <code>geschlecht</code>/<code>m/w</code>. Auch Exporte aus dem Schulportal Brandenburg werden erkannt.</p>
         <div class="row">
           <label class="btn btn-primary btn-block" for="csv-file" style="cursor:pointer;">${icon("fileUp", { size: 18 })} Datei wählen</label>
           <button class="btn" id="download-template">${icon("download", { size: 18 })} Vorlage</button>
@@ -123,7 +127,7 @@ export async function renderRoster(app, courseId) {
   document.getElementById("csv-file").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const text = await file.text();
+    const text = await readTextSmart(file);
     const rows = parseCSV(text);
     const students = rowsToStudents(rows);
     if (students.length === 0) {

@@ -67,6 +67,18 @@ export function toCSV(rows, headers, delim = ";") {
   return lines.join("\r\n");
 }
 
+// Older German school-admin exports (e.g. Schulportal) are often saved as
+// Windows-1252, not UTF-8. Detect invalid UTF-8 and fall back so umlauts
+// (ä/ö/ü/ß) in names don't get mangled.
+export async function readTextSmart(file) {
+  const buf = await file.arrayBuffer();
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder("windows-1252").decode(buf);
+  }
+}
+
 export function downloadTextFile(filename, text, mime = "text/csv;charset=utf-8") {
   const blob = new Blob(["﻿" + text], { type: mime });
   const url = URL.createObjectURL(blob);
