@@ -186,6 +186,15 @@ a {
   transform: scale(0.98);
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:disabled:active {
+  transform: none;
+}
+
 .btn-primary {
   background: var(--primary);
   color: var(--primary-contrast);
@@ -364,7 +373,7 @@ a {
   font-size: 1.1rem;
 }
 
-/* Compact attendance roll - everyone defaults to present, only exceptions are tappable */
+/* Compact attendance roll - every student needs an explicit status tap */
 .roll-row {
   display: flex;
   align-items: center;
@@ -378,8 +387,9 @@ a {
   min-height: 52px;
 }
 
-.roll-row.is-present-default {
-  border-left-color: var(--ok);
+.roll-row.is-unset {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
 }
 
 .roll-name {
@@ -413,6 +423,12 @@ a {
   line-height: 1;
   cursor: pointer;
   padding: 0.2rem;
+}
+
+.exc-btn[data-exc="anwesend"].active {
+  background: var(--ok-bg);
+  border-color: var(--ok);
+  color: var(--ok);
 }
 
 .exc-btn[data-exc="abwesend"].active {
